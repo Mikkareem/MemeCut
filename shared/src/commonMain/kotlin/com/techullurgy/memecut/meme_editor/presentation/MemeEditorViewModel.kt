@@ -3,28 +3,26 @@
 package com.techullurgy.memecut.meme_editor.presentation
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.techullurgy.memecut.core.presentation.MemeTemplate
 import com.techullurgy.memecut.meme_editor.domain.MemeExporter
-import com.techullurgy.memecut.meme_editor.domain.SaveToStorageStrategy
 import com.techullurgy.memecut.meme_editor.presentation.util.PlatformShareSheet
+import com.techullurgy.memecut.meme_editor.presentation.util.toByteArray
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.getDrawableResourceBytes
-import org.jetbrains.compose.resources.getSystemResourceEnvironment
-import org.koin.android.annotation.KoinViewModel
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class MemeEditorViewModel(
     private val memeExporter: MemeExporter,
-    private val storageStrategy: SaveToStorageStrategy,
     private val shareSheet: PlatformShareSheet
 ) : ViewModel() {
 
@@ -61,24 +59,18 @@ class MemeEditorViewModel(
                 scale = action.scale
             )
 
-            is MemeEditorAction.OnSaveMemeClick -> saveMeme(action.memeTemplate)
+            is MemeEditorAction.OnSaveMemeClick -> saveMeme(action.imageBitmap)
             is MemeEditorAction.OnSelectMemeText -> selectMemeText(action.id)
             MemeEditorAction.OnTapOutsideSelectedText -> unselectMemeText()
         }
     }
 
-    private fun saveMeme(memeTemplate: MemeTemplate) {
+    private fun saveMeme(memeBitmap: ImageBitmap) {
         viewModelScope.launch {
+            val memeBytes = async(Dispatchers.Default) { memeBitmap.toByteArray() }
+
             memeExporter
-                .exportMeme(
-                    backgroundImageBytes = getDrawableResourceBytes(
-                        environment = getSystemResourceEnvironment(),
-                        resource = memeTemplate.drawable
-                    ),
-                    memeTexts = state.value.memeTexts,
-                    templateSize = state.value.templateSize,
-                    saveToStorageStrategy = storageStrategy
-                )
+                .exportMeme(memeBytes = memeBytes.await())
                 .onSuccess {
                     shareSheet.shareFile(it)
                 }

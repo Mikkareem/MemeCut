@@ -1,15 +1,15 @@
 package com.techullurgy.memecut.meme_editor.presentation
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.IntSize
-import com.techullurgy.memecut.core.presentation.MemeTemplate
 
 sealed interface MemeEditorAction {
     data object OnGoBackClick: MemeEditorAction
     data object OnConfirmLeaveWithoutSaving: MemeEditorAction
     data object OnDismissLeaveWithoutSaving: MemeEditorAction
 
-    data class OnSaveMemeClick(val memeTemplate: MemeTemplate): MemeEditorAction
+    data class OnSaveMemeClick(val imageBitmap: ImageBitmap) : MemeEditorAction
     data object OnTapOutsideSelectedText: MemeEditorAction
 
     data object OnAddTextClick: MemeEditorAction

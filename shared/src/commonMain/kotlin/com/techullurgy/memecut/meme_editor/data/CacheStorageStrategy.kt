@@ -1,7 +1,8 @@
 package com.techullurgy.memecut.meme_editor.data
 
 import com.techullurgy.memecut.meme_editor.domain.SaveToStorageStrategy
+import com.techullurgy.memecut.meme_editor.domain.StorageHandle
 
 expect class CacheStorageStrategy: SaveToStorageStrategy {
-    override fun getFilePath(fileName: String): String
+    override fun giveStorageHandle(fileName: String): StorageHandle
 }

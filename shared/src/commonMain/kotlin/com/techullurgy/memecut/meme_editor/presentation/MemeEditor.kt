@@ -19,27 +19,32 @@ import androidx.compose.material3.adaptive.currentWindowSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import memecut.shared.generated.resources.Res
-import memecut.shared.generated.resources.cancel
-import memecut.shared.generated.resources.leave
-import memecut.shared.generated.resources.leave_editor_message
-import memecut.shared.generated.resources.leave_editor_title
-import memecut.shared.generated.resources.meme_template_01
 import com.techullurgy.memecut.core.presentation.MemeTemplate
 import com.techullurgy.memecut.core.theme.MemeCreatorTheme
 import com.techullurgy.memecut.meme_editor.presentation.components.BottomBar
 import com.techullurgy.memecut.meme_editor.presentation.components.ConfirmationDialog
 import com.techullurgy.memecut.meme_editor.presentation.components.ConfirmationDialogConfig
 import com.techullurgy.memecut.meme_editor.presentation.components.DraggableContainer
+import kotlinx.coroutines.launch
+import memecut.shared.generated.resources.Res
+import memecut.shared.generated.resources.cancel
+import memecut.shared.generated.resources.leave
+import memecut.shared.generated.resources.leave_editor_message
+import memecut.shared.generated.resources.leave_editor_title
+import memecut.shared.generated.resources.meme_template_01
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -48,8 +53,9 @@ import org.koin.compose.viewmodel.koinViewModel
 fun MemeEditorRoot(
     template: MemeTemplate,
     onGoBack: () -> Unit,
-    viewModel: MemeEditorViewModel = koinViewModel()
 ) {
+    val viewModel: MemeEditorViewModel = koinViewModel()
+
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.hasLeftEditor) {
@@ -71,6 +77,11 @@ fun MemeEditorScreen(
     state: MemeEditorState,
     onAction: (MemeEditorAction) -> Unit,
 ) {
+
+    val layer = rememberGraphicsLayer()
+
+    val scope = rememberCoroutineScope()
+
     BackHandler(
         enabled = !state.isLeavingWithoutSaving
     ) {
@@ -91,7 +102,10 @@ fun MemeEditorScreen(
                     onAction(MemeEditorAction.OnAddTextClick)
                 },
                 onSaveClick = {
-                    onAction(MemeEditorAction.OnSaveMemeClick(template))
+                    scope.launch {
+                        val bitmap = layer.toImageBitmap()
+                        onAction(MemeEditorAction.OnSaveMemeClick(bitmap))
+                    }
                 }
             )
         }
@@ -103,7 +117,16 @@ fun MemeEditorScreen(
             contentAlignment = Alignment.Center
         ) {
             val windowSize = currentWindowSize()
-            Box {
+
+            Box(
+                modifier = Modifier
+                    .drawWithContent {
+                        layer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(layer)
+                    }
+            ) {
                 Image(
                     painter = painterResource(template.drawable),
                     contentDescription = null,
